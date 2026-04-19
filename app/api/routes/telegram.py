@@ -7,11 +7,18 @@ router = APIRouter()
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
-    data = await request.json()
-
     try:
-        message = data.get("message", {})
-        chat_id = str(message["chat"]["id"])
+        data = await request.json()
+
+        message = data.get("message")
+        if not message:
+            return {"ok": True}
+
+        chat = message.get("chat")
+        if not chat:
+            return {"ok": True}
+
+        chat_id = str(chat.get("id"))
         text = message.get("text", "")
 
         if text.startswith("/start"):

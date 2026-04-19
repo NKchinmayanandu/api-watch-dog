@@ -33,8 +33,6 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    print("INPUT EMAIL:", form_data.username)
-    print("INPUT PASSWORD:", form_data.password)
     user = db.query(User).filter(User.email == form_data.username).first()
     print("DB USER:", user)
     if user:
