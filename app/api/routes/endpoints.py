@@ -71,7 +71,7 @@ def get_logs(
 async def test_telegram():
     import httpx, os
 
-    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
     chat_id = "PUT_YOUR_CHAT_ID"
 
     async with httpx.AsyncClient() as client:
