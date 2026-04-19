@@ -67,3 +67,20 @@ def get_logs(
         "url": endpoint.url,
         "logs": logs
     }
+@router.get("/test-telegram")
+async def test_telegram():
+    import httpx, os
+
+    BOT_TOKEN = os.getenv("BOT_TOKEN")
+    chat_id = "PUT_YOUR_CHAT_ID"
+
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": "🚀 test from backend"
+            }
+        )
+
+    return {"sent": True}

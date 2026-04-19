@@ -9,13 +9,34 @@ from dotenv import load_dotenv
 load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+if not BOT_TOKEN:
+    raise ValueError("BOT_TOKEN not set")
+
 router = APIRouter()
+
+
+async def send_telegram_message(chat_id: str, text: str):
+    async with httpx.AsyncClient() as client:
+        await client.post(
+            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
+            json={
+                "chat_id": chat_id,
+                "text": text
+            }
+        )
+
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
     try:
-        data = await request.json()
-        print("DATA:", data)  # keep this for debugging
+        try:
+            data = await request.json()
+        except Exception:
+            print("❌ Invalid JSON received")
+            return {"ok": True}
+
+        print("📩 DATA:", data)
 
         message = data.get("message")
         if not message:
@@ -28,54 +49,46 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
         chat_id = str(chat.get("id"))
         text = message.get("text", "")
 
-        async with httpx.AsyncClient() as client:
+        print("💬 TEXT:", text)
 
-            if text.startswith("/start"):
-                parts = text.split()
+        if not text.startswith("/start"):
+            return {"ok": True}
 
-                if len(parts) > 1:
-                    token = parts[1]
+        parts = text.split()
 
-                    user = db.query(User).filter(User.link_token == token).first()
+        # 🔹 CASE 1: /start <token>
+        if len(parts) > 1:
+            token = parts[1]
 
-                    if user:
-                        user.chat_id = chat_id
-                        db.commit()
+            user = db.query(User).filter(User.link_token == token).first()
 
-                        print(f"✅ Linked Telegram for user {user.id}")
+            if user:
+                user.chat_id = chat_id
+                db.commit()
 
-                        # 🔥 SEND RESPONSE
-                        await client.post(
-                            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                            json={
-                                "chat_id": chat_id,
-                                "text": "✅ Telegram linked successfully!"
-                            }
-                        )
+                print(f"✅ Linked Telegram for user {user.id}")
 
-                    else:
-                        if not user:
-                            print("❌ TOKEN NOT FOUND:", token) 
+                await send_telegram_message(
+                    chat_id,
+                    "✅ Telegram linked successfully!"
+                )
 
-                        await client.post(
-                            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                            json={
-                                "chat_id": chat_id,
-                                "text": "❌ Invalid or expired link."
-                            }
-                        )
+            else:
+                print("❌ TOKEN NOT FOUND:", token)
 
-                else:
-                    # 🔥 HANDLE PLAIN /start
-                    await client.post(
-                        f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-                        json={
-                            "chat_id": chat_id,
-                            "text": "Use the link from dashboard to connect."
-                        }
-                    )
+                await send_telegram_message(
+                    chat_id,
+                    "❌ Invalid or expired link."
+                )
+
+        # 🔹 CASE 2: plain /start
+        else:
+            await send_telegram_message(
+                chat_id,
+                "Use the link from dashboard to connect your account."
+            )
 
     except Exception as e:
-        print("Webhook error:", e)
+        print("❌ Webhook error:", e)
 
     return {"ok": True}
