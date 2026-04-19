@@ -5,7 +5,8 @@ from app.models.user import User
 import httpx
 import os
 from dotenv import load_dotenv
-
+from app.api.deps import get_current_user
+import secrets
 load_dotenv()
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -25,7 +26,26 @@ async def send_telegram_message(chat_id: str, text: str):
                 "text": text
             }
         )
+@router.get("/telegram-link")
+def generate_telegram_link(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    # generate token
+    token = secrets.token_urlsafe(16)
 
+    # save to user
+    current_user.link_token = token
+    db.commit()
+
+    # your bot username (IMPORTANT)
+    BOT_USERNAME = "Api_watchdog_bot"  # change this to your actual bot username
+
+    link = f"https://t.me/{BOT_USERNAME}?start={token}"
+
+    return {
+        "telegram_link": link
+    }
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
