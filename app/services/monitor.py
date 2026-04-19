@@ -1,33 +1,49 @@
 import requests
-import time 
+import time
+from datetime import datetime, timedelta
+
 from app.services.notifier import send_alert
 from app.db.session import SessionLocal
 from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.models.user import User
-def check_endpoint(url:str):
-    try:
-        response = requests.get(url,timeout=5)
 
-        if response.status_code == 200: 
-            return "UP",response.status_code
+
+def check_endpoint(url: str):
+    try:
+        response = requests.get(url, timeout=5)
+        if response.status_code == 200:
+            return "UP", response.status_code
         else:
-            return "DOWN",response.status_code
+            return "DOWN", response.status_code
     except requests.exceptions.RequestException:
         return "DOWN", None
+
 
 def has_status_changed(old_status: str, new_status: str):
     return old_status != new_status
 
+
 def run_monitor():
     last_status_map = {}
+    last_cleanup = 0   
 
     while True:
-        print("Monitor loop running...")
-
+        now = time.time()
         db = SessionLocal()
 
         try:
+            print("Monitor loop running...")
+
+            # 🔥 CLEANUP (every 1 hour)
+            if now - last_cleanup > 3600:
+                db.query(CheckLog).filter(
+                    CheckLog.checked_at < datetime.utcnow() - timedelta(days=1)
+                ).delete()
+                db.commit()
+                last_cleanup = now
+                print("🧹 Old logs cleaned")
+
             endpoints = db.query(Endpoint).all()
 
             for endpoint in endpoints:
@@ -35,30 +51,32 @@ def run_monitor():
 
                 current_status, code = check_endpoint(url)
 
-                log = CheckLog(
-                        endpoint_id=endpoint.id,
-                        status=current_status,
-                        status_code=code
-                                        )
+                last_status = last_status_map.get(url)
 
-                db.add(log)
-                db.commit()
-
-                # 🔥 FETCH USER
+  
                 user = db.query(User).filter(User.id == endpoint.user_id).first()
                 chat_id = user.chat_id if user else None
 
-                last_status = last_status_map.get(url)
+                if last_status is None or has_status_changed(last_status, current_status):
 
-                if last_status is None:
-                    if current_status == "DOWN":
-                        send_alert(f"🚨 {url} is DOWN (first check)", chat_id)
+                    log = CheckLog(
+                        endpoint_id=endpoint.id,
+                        status=current_status,
+                        status_code=code
+                    )
+                    db.add(log)
+                    db.commit()
 
-                elif has_status_changed(last_status, current_status):
-                    if current_status == "DOWN":
-                        send_alert(f"🚨 {url} went DOWN", chat_id)
+                
+                    if last_status is None:
+                        if current_status == "DOWN":
+                            send_alert(f"🚨 {url} is DOWN (first check)", chat_id)
+
                     else:
-                        send_alert(f"✅ {url} is back UP", chat_id)
+                        if current_status == "DOWN":
+                            send_alert(f"🚨 {url} went DOWN", chat_id)
+                        else:
+                            send_alert(f"✅ {url} is back UP", chat_id)
 
                 last_status_map[url] = current_status
 
@@ -69,5 +87,3 @@ def run_monitor():
             db.close()
 
         time.sleep(30)
-
-               
