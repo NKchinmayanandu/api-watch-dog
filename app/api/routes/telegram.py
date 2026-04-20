@@ -31,14 +31,11 @@ def generate_telegram_link(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    if current_user.link_token:
-        token = current_user.link_token
-    else:
-        token = secrets.token_urlsafe(16)
-        current_user.link_token = token
-        db.commit()
+    token = secrets.token_urlsafe(16)
+    current_user.link_token = token
+    db.commit()
 
-    BOT_USERNAME = "Api_watchdog_bot"
+    BOT_USERNAME = "@Chinmayanandu_bot"
 
     link = f"https://t.me/{BOT_USERNAME}?start={token}"
 
