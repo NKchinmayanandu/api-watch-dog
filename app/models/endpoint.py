@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String,ForeignKey
+from sqlalchemy import Column, Integer, String, ForeignKey, DateTime
 from app.db.base import Base
+from datetime import datetime
 
 class Endpoint(Base):
     __tablename__ = "endpoints"
@@ -7,3 +8,6 @@ class Endpoint(Base):
     id = Column(Integer, primary_key=True, index=True)
     url = Column(String, unique=True, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"))
+    last_status = Column(String, nullable=True)
+    last_checked = Column(DateTime, nullable=True)
+    last_changed = Column(DateTime, nullable=True)

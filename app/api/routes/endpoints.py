@@ -35,7 +35,13 @@ def get_my_endpoints(
     ).all()
 
     return [
-        {"endpoint_id": e.id, "url": e.url}
+        {
+            "endpoint_id": e.id, 
+            "url": e.url,
+            "last_status": e.last_status,
+            "last_checked": e.last_checked,
+            "last_changed": e.last_changed
+        }
         for e in endpoints
     ]
 

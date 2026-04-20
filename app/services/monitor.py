@@ -25,7 +25,6 @@ def has_status_changed(old_status: str, new_status: str):
 
 
 def run_monitor():
-    last_status_map = {}
     last_cleanup = 0   
 
     while True:
@@ -50,9 +49,13 @@ def run_monitor():
                 url = endpoint.url
 
                 current_status, code = check_endpoint(url)
+                
+                # Double check if DOWN
+                if current_status == "DOWN":
+                    time.sleep(2)
+                    current_status, code = check_endpoint(url)
 
-                last_status = last_status_map.get(url)
-
+                last_status = endpoint.last_status
   
                 user = db.query(User).filter(User.id == endpoint.user_id).first()
                 chat_id = user.chat_id if user else None
@@ -65,8 +68,8 @@ def run_monitor():
                         status_code=code
                     )
                     db.add(log)
-                    db.commit()
-
+                    
+                    endpoint.last_changed = datetime.utcnow()
                 
                     if last_status is None:
                         if current_status == "DOWN":
@@ -78,7 +81,9 @@ def run_monitor():
                         else:
                             send_alert(f"✅ {url} is back UP", chat_id)
 
-                last_status_map[url] = current_status
+                endpoint.last_status = current_status
+                endpoint.last_checked = datetime.utcnow()
+                db.commit()
 
         except Exception as e:
             print("❌ ERROR:", e)
