@@ -12,7 +12,7 @@ from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.api.routes.auth import router as auth_router 
 from app.api.routes.telegram import router as telegram_router
-
+from app.api.routes.test import router as test_router
 
 Base.metadata.create_all(bind=engine)
 load_dotenv(dotenv_path=os.path.join(os.getcwd(), ".env"))
@@ -21,7 +21,7 @@ app = FastAPI()
 app.include_router(endpoint_router, prefix="/endpoints")
 app.include_router(auth_router)
 app.include_router(telegram_router)
-
+app.include_router(test_router)
 @app.get("/")
 def home():
     return {"message":"api watch dog running"}
