@@ -20,7 +20,7 @@ def send_alert(message: str, chat_id: int | None):
     }
 
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload,timeout=5)
 
         if response.status_code != 200:
             print("Telegram failed:", response.text)

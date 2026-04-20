@@ -31,21 +31,18 @@ def generate_telegram_link(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # generate token
-    token = secrets.token_urlsafe(16)
+    if current_user.link_token:
+        token = current_user.link_token
+    else:
+        token = secrets.token_urlsafe(16)
+        current_user.link_token = token
+        db.commit()
 
-    # save to user
-    current_user.link_token = token
-    db.commit()
-
-    # your bot username (IMPORTANT)
-    BOT_USERNAME = "Api_watchdog_bot"  # change this to your actual bot username
+    BOT_USERNAME = "Api_watchdog_bot"
 
     link = f"https://t.me/{BOT_USERNAME}?start={token}"
 
-    return {
-        "telegram_link": link
-    }
+    return {"telegram_link": link}
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
