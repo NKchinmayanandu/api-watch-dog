@@ -6,7 +6,7 @@ class Endpoint(Base):
     __tablename__ = "endpoints"
 
     id = Column(Integer, primary_key=True, index=True)
-    url = Column(String, unique=True, nullable=False)
+    url = Column(String, nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"))
     last_status = Column(String, nullable=True)
     last_checked = Column(DateTime, nullable=True)

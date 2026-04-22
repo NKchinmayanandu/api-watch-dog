@@ -7,16 +7,18 @@ from app.core.security import hash_password, verify_password, create_access_toke
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+from app.schemas.user import UserCreate
+
 @router.post("/register")
-def register(email: str, password: str, db: Session = Depends(get_db)):
-    existing = db.query(User).filter(User.email == email).first()
+def register(user_in: UserCreate, db: Session = Depends(get_db)):
+    existing = db.query(User).filter(User.email == user_in.email).first()
 
     if existing:
         raise HTTPException(status_code=400, detail="User already exists")
 
     user = User(
-        email=email,
-        password=hash_password(password)
+        email=user_in.email,
+        password=hash_password(user_in.password)
     )
 
     db.add(user)

@@ -31,11 +31,13 @@ def generate_telegram_link(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    token = secrets.token_urlsafe(16)
-    current_user.link_token = token
-    db.commit()
+    token = current_user.link_token
+    if not token:
+        token = secrets.token_urlsafe(16)
+        current_user.link_token = token
+        db.commit()
 
-    BOT_USERNAME = "@Chinmayanandu_bot"
+    BOT_USERNAME = "Chinmayanandu_bot"
 
     link = f"https://t.me/{BOT_USERNAME}?start={token}"
 
