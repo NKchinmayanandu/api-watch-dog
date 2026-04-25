@@ -16,7 +16,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.telegram import router as telegram_router
 from app.api.routes.test import router as test_router
 
-Base.metadata.create_all(bind=engine)
+
 load_dotenv(dotenv_path=os.path.join(os.getcwd(), ".env"))
 
 app = FastAPI()

@@ -1,12 +1,12 @@
 from passlib.context import CryptContext
 from jose import jwt
 from datetime import datetime, timedelta
-import os
+from app.core.config import settings
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-SECRET_KEY = os.getenv("SECRET_KEY")
-ALGORITHM = os.getenv("ALGORITHM")
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
 
 def hash_password(password: str):
     return pwd_context.hash(password)

@@ -3,13 +3,12 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
 import httpx
-import os
 from dotenv import load_dotenv
 from app.api.deps import get_current_user
 import secrets
-load_dotenv()
+from app.core.config import settings
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_TOKEN = settings.TELEGRAM_BOT_TOKEN
 
 if not TELEGRAM_BOT_TOKEN:
     raise ValueError("TELEGRAM_BOT_TOKEN not set")
@@ -41,7 +40,10 @@ def generate_telegram_link(
 
     link = f"https://t.me/{BOT_USERNAME}?start={token}"
 
-    return {"telegram_link": link}
+    return {
+        "telegram_link": link,
+        "is_linked": bool(current_user.chat_id)
+    }
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):

@@ -9,9 +9,11 @@ from app.models.logs import CheckLog
 from app.models.user import User
 
 
+HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+
 def check_endpoint(url: str):
     try:
-        response = requests.get(url, timeout=5)
+        response = requests.get(url, headers=HEADERS, timeout=5)
         if response.status_code == 200:
             return "UP", response.status_code
         else:
@@ -46,44 +48,49 @@ def run_monitor():
             endpoints = db.query(Endpoint).all()
 
             for endpoint in endpoints:
-                url = endpoint.url
+                try:
+                    url = endpoint.url
 
-                current_status, code = check_endpoint(url)
-                
-                # Double check if DOWN
-                if current_status == "DOWN":
-                    time.sleep(2)
                     current_status, code = check_endpoint(url)
-
-                last_status = endpoint.last_status
-  
-                user = db.query(User).filter(User.id == endpoint.user_id).first()
-                chat_id = user.chat_id if user else None
-
-                if last_status is None or has_status_changed(last_status, current_status):
-
-                    log = CheckLog(
-                        endpoint_id=endpoint.id,
-                        status=current_status,
-                        status_code=code
-                    )
-                    db.add(log)
                     
-                    endpoint.last_changed = datetime.utcnow()
-                
-                    if last_status is None:
-                        if current_status == "DOWN":
-                            send_alert(f"🚨 {url} is DOWN (first check)", chat_id)
+                    # Double check if DOWN
+                    if current_status == "DOWN":
+                        time.sleep(2)
+                        current_status, code = check_endpoint(url)
 
-                    else:
-                        if current_status == "DOWN":
-                            send_alert(f"🚨 {url} went DOWN", chat_id)
+                    last_status = endpoint.last_status
+  
+                    user = db.query(User).filter(User.id == endpoint.user_id).first()
+                    chat_id = user.chat_id if user else None
+
+                    if last_status is None or has_status_changed(last_status, current_status):
+
+                        log = CheckLog(
+                            endpoint_id=endpoint.id,
+                            status=current_status,
+                            status_code=code
+                        )
+                        db.add(log)
+                        
+                        endpoint.last_changed = datetime.utcnow()
+                    
+                        if last_status is None:
+                            if current_status == "DOWN":
+                                send_alert(f"🚨 {url} is DOWN (first check)", chat_id)
+
                         else:
-                            send_alert(f"✅ {url} is back UP", chat_id)
+                            if current_status == "DOWN":
+                                send_alert(f"🚨 {url} went DOWN", chat_id)
+                            else:
+                                send_alert(f"✅ {url} is back UP", chat_id)
 
-                endpoint.last_status = current_status
-                endpoint.last_checked = datetime.utcnow()
-                db.commit()
+                    endpoint.last_status = current_status
+                    endpoint.last_checked = datetime.utcnow()
+                    db.commit()
+
+                except Exception as e:
+                    print(f"❌ ERROR checking {endpoint.url}: {e}")
+                    db.rollback()
 
         except Exception as e:
             print("❌ ERROR:", e)
