@@ -5,5 +5,5 @@ services:
       - "8000:8000"
     env_file:
       - .env
-    volumes:
-      - .:/app
+    restart: unless-stopped
+    # NO volumes mount in production!

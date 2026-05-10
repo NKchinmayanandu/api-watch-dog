@@ -37,3 +37,7 @@ def start_mointor():
     thread.daemon = True
     thread.start()
 
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
