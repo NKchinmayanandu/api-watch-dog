@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 import threading
 from app.services.monitor import run_monitor
 from app.api.routes.endpoints import router as endpoint_router
@@ -28,7 +28,10 @@ app.include_router(test_router)
 
 @app.get("/")
 def home():
-    return FileResponse("static/index.html")
+    return FileResponse(
+        "static/index.html",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate", "Pragma": "no-cache"}
+    )
 
 @app.on_event("startup")
 def start_mointor():
