@@ -18,7 +18,6 @@ from app.api.routes.telegram import router as telegram_router
 from app.api.routes.test import router as test_router
 
 
-load_dotenv(dotenv_path=os.path.join(os.getcwd(), ".env"))
 
 app = FastAPI()
 
