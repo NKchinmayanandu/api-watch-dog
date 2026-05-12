@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: api-watchdog-frontend
+    runtime: static
+    buildCommand: ""        # no build step needed — it's plain HTML
+    staticPublishPath: static
+    pullRequestPreviewsEnabled: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
