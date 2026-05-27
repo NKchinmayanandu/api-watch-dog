@@ -6,157 +6,412 @@
   <title>API Watchdog</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: {
-            bg: '#0f172a',
-            surface: '#1e293b',
-            border: '#334155',
-            muted: '#64748b',
-            up: '#22c55e',
-            down: '#ef4444',
-          }
-        }
-      }
-    }
-  </script>
   <style>
-    body { background-color: #0f172a; color: #e2e8f0; font-family: 'Inter', sans-serif; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .glass {
-      background: rgba(30, 41, 59, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(51, 65, 85, 0.6);
+    :root {
+      --bg: #0a0a12;
+      --surface: #12121e;
+      --surface-2: #1a1a2e;
+      --border: #1e1e3a;
+      --border-strong: #2a2a4a;
+      --text: #e2e2ef;
+      --text-secondary: #8888aa;
+      --text-muted: #55557a;
+      --accent: #6c5ce7;
+      --accent-hover: #5a4bd5;
+      --accent-glow: rgba(108, 92, 231, 0.25);
+      --success: #22c55e;
+      --error: #ef4444;
+      --link: #7c6cf0;
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
     }
 
-    .btn-primary {
-      background: #6366f1;
-      color: white;
-      padding: 0.5rem 1.25rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    .hidden { display: none !important; }
+
+    /* ── AUTH PAGE (split-screen) ── */
+    #authPage {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .auth-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 64px;
+      max-width: 540px;
+    }
+
+    .auth-info h1 {
+      font-size: 36px;
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -1.5px;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .auth-info .lead {
+      font-size: 15px;
+      color: var(--text-secondary);
+      margin-bottom: 40px;
+      line-height: 1.6;
+    }
+
+    .auth-info h2 {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: -0.3px;
+    }
+
+    .auth-info p, .auth-info ol {
+      font-size: 14px;
+      color: var(--text-secondary);
+      line-height: 1.7;
+      margin-bottom: 28px;
+    }
+
+    .auth-info ol {
+      padding-left: 18px;
+    }
+
+    .auth-info ol li {
+      margin-bottom: 4px;
+    }
+
+    .auth-info a {
+      color: var(--link);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    .auth-form-wrapper {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      background: radial-gradient(ellipse at 60% 40%, rgba(108,92,231,0.06) 0%, transparent 70%);
+    }
+
+    .auth-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 0 40px rgba(108,92,231,0.08), 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .auth-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .auth-card-title svg { color: var(--accent); }
+
+    .tab-row {
+      display: flex;
+      gap: 2px;
+      background: var(--bg);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      flex: 1;
+      padding: 8px 0;
+      border: none;
+      border-radius: 4px;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: inherit;
+      font-size: 13px;
       font-weight: 500;
       cursor: pointer;
-      transition: background 0.2s, opacity 0.2s;
-      border: none;
+      transition: all 0.15s;
     }
-    .btn-primary:hover { background: #4f46e5; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .auth-error {
+      font-size: 12px;
+      color: var(--error);
+      margin-bottom: 12px;
+    }
+
+    .input-field {
+      display: block;
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 12px;
+    }
+
+    .input-field:focus { border-color: var(--accent); }
+    .input-field::placeholder { color: var(--text-muted); }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      padding: 10px 0;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+
+    .btn-primary:hover { background: var(--accent-hover); }
+
+    /* ── MAIN APP ── */
+    #app { min-height: 100vh; }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: rgba(10,10,18,0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .app-header-inner {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-logo {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .app-logo svg { color: var(--accent); }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
     .btn-ghost {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       background: transparent;
-      color: #94a3b8;
-      padding: 0.5rem 1rem;
-      border-radius: 8px;
-      font-size: 0.875rem;
+      color: var(--text-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 6px 12px;
+      font-family: inherit;
+      font-size: 12px;
       font-weight: 500;
       cursor: pointer;
       transition: color 0.2s, background 0.2s;
-      border: 1px solid #334155;
     }
-    .btn-ghost:hover { color: #e2e8f0; background: #1e293b; }
 
-    .input-field {
-      background: #0f172a;
-      border: 1px solid #334155;
-      color: #e2e8f0;
-      border-radius: 8px;
-      padding: 0.5rem 0.875rem;
-      font-size: 0.875rem;
-      width: 100%;
-      outline: none;
-      transition: border-color 0.2s;
+    .btn-ghost:hover {
+      color: var(--text);
+      background: var(--surface-2);
     }
-    .input-field:focus { border-color: #6366f1; }
-    .input-field::placeholder { color: #475569; }
+
+    .app-main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 32px 24px;
+    }
+
+    .add-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .add-row .input-field { margin-bottom: 0; flex: 1; }
+
+    .btn-add {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 16px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+
+    .btn-add:hover { background: var(--accent-hover); }
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stats-bar .stat-group { display: flex; gap: 16px; }
+    .stat-up { color: var(--success); font-weight: 600; }
+    .stat-down { color: var(--error); font-weight: 600; }
 
     .endpoint-card {
-      background: rgba(30, 41, 59, 0.5);
-      border: 1px solid #1e293b;
-      border-radius: 10px;
-      padding: 1rem 1.25rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 14px 16px;
+      margin-bottom: 8px;
       transition: border-color 0.2s;
       animation: fadeIn 0.25s ease;
     }
-    .endpoint-card:hover { border-color: #334155; }
+
+    .endpoint-card:hover { border-color: var(--border-strong); }
+
+    .ep-row { display: flex; align-items: center; justify-content: space-between; }
+    .ep-left { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .ep-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: 12px; }
+
+    .ep-url {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--link);
+      text-decoration: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .ep-url:hover { text-decoration: underline; }
+
+    .ep-meta {
+      display: flex;
+      gap: 16px;
+      margin-top: 6px;
+      margin-left: 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .ep-meta span span { color: var(--text-secondary); }
+
+    .badge-up { color: var(--success); font-size: 11px; font-weight: 600; }
+    .badge-down { color: var(--error); font-size: 11px; font-weight: 600; }
+    .badge-pending { color: var(--text-muted); font-size: 11px; font-weight: 600; }
+
+    .btn-del {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px;
+      transition: color 0.15s;
+    }
+
+    .btn-del:hover { color: var(--error); }
+
+    .pulse-up {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 0 rgba(34,197,94,0.4);
+      animation: pulseGreen 2s infinite;
+    }
+
+    .dot-down { width: 8px; height: 8px; border-radius: 50%; background: var(--error); }
+    .dot-unknown { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); }
+
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.4); }
+      70% { box-shadow: 0 0 0 6px rgba(34,197,94,0); }
+      100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+    }
 
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(6px); }
       to { opacity: 1; transform: translateY(0); }
     }
 
-    .pulse-up {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #22c55e;
-      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
-      animation: pulse-green 2s infinite;
-    }
-    @keyframes pulse-green {
-      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
-      70% { box-shadow: 0 0 0 6px rgba(34, 197, 94, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    .empty-state {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 48px 0;
     }
 
-    .dot-down {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #ef4444;
-    }
+    .empty-state svg { margin: 0 auto 12px; color: var(--border-strong); }
 
-    .dot-unknown {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: #475569;
-    }
-
-    /* modal */
-    .modal-backdrop {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center;
-      z-index: 50;
-    }
-    .modal {
-      background: #1e293b;
-      border: 1px solid #334155;
-      border-radius: 14px;
-      padding: 2rem;
-      width: 100%; max-width: 400px;
-    }
-
-    /* toast */
+    /* Toast */
     #toast {
-      position: fixed; bottom: 1.5rem; right: 1.5rem;
-      padding: 0.65rem 1.1rem;
-      border-radius: 8px;
-      font-size: 0.8rem;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 10px 16px;
+      border-radius: var(--radius-sm);
+      font-size: 12px;
       font-weight: 500;
       opacity: 0;
       transition: opacity 0.25s;
       z-index: 100;
       pointer-events: none;
     }
+
     #toast.show { opacity: 1; }
 
-    .tab-btn {
-      padding: 0.4rem 1rem;
-      border-radius: 6px;
-      font-size: 0.875rem;
-      font-weight: 500;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      color: #64748b;
-      transition: all 0.15s;
+    /* Responsive */
+    @media (max-width: 768px) {
+      #authPage { flex-direction: column; }
+      .auth-info { max-width: 100%; padding: 40px 24px 0; }
+      .auth-form-wrapper { padding: 24px; }
     }
-    .tab-btn.active { background: #334155; color: #e2e8f0; }
   </style>
 </head>
 <body>
@@ -164,98 +419,104 @@
 <!-- TOAST -->
 <div id="toast"></div>
 
-<!-- AUTH MODAL -->
-<div id="authModal" class="modal-backdrop">
-  <div class="modal">
-    <div class="flex items-center gap-2 mb-6">
-      <i data-lucide="shield-check" class="text-indigo-400" style="width:20px;height:20px"></i>
-      <span class="font-semibold text-base">API Watchdog</span>
-    </div>
+<!-- AUTH PAGE -->
+<div id="authPage">
+  <div class="auth-info">
+    <h1>Getting Started with API Watchdog.</h1>
+    <p class="lead">Monitor your APIs in real-time with instant alerts, clean dashboards, and Telegram notifications — all in one place.</p>
 
-    <!-- Tabs -->
-    <div class="flex gap-1 mb-5 bg-slate-900 p-1 rounded-lg">
-      <button class="tab-btn active flex-1" id="tabLogin" onclick="switchTab('login')">Login</button>
-      <button class="tab-btn flex-1" id="tabRegister" onclick="switchTab('register')">Register</button>
-    </div>
+    <h2>Quick Setup</h2>
+    <ol>
+      <li>Create an account or log in to your dashboard.</li>
+      <li>Add your API endpoint URLs to start monitoring.</li>
+      <li>Connect Telegram for instant down-alerts.</li>
+    </ol>
 
-    <div id="authError" class="text-red-400 text-xs mb-3 hidden"></div>
+    <h2>Feature Overview</h2>
+    <p>
+      Real-time health checks every 30 seconds.<br>
+      Custom Telegram alerts when endpoints go down.<br>
+      Per-endpoint status history and check logs.
+    </p>
 
-    <div class="flex flex-col gap-3">
+    <h2>Support</h2>
+    <p>Learn more or contribute via our <a href="https://github.com" target="_blank">GitHub repository</a>.</p>
+  </div>
+
+  <div class="auth-form-wrapper">
+    <div class="auth-card">
+      <div class="auth-card-title">
+        <i data-lucide="shield-check" style="width:18px;height:18px"></i>
+        <span>API Watchdog</span>
+      </div>
+
+      <div class="tab-row">
+        <button class="tab-btn active" id="tabLogin" onclick="switchTab('login')">Login</button>
+        <button class="tab-btn" id="tabRegister" onclick="switchTab('register')">Register</button>
+      </div>
+
+      <div id="authError" class="auth-error hidden"></div>
+
       <input class="input-field" id="authEmail" type="email" placeholder="Email" />
       <input class="input-field" id="authPassword" type="password" placeholder="Password" />
-      <button class="btn-primary w-full mt-1" id="authBtn" onclick="handleAuth()">Login</button>
+      <button class="btn-primary" id="authBtn" onclick="handleAuth()">Login</button>
     </div>
   </div>
 </div>
 
 <!-- MAIN APP -->
-<div id="app" class="hidden min-h-screen">
-
-  <!-- HEADER -->
-  <header class="glass border-b border-slate-800 sticky top-0 z-40">
-    <div class="max-w-3xl mx-auto px-6 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-2">
-        <i data-lucide="shield-check" class="text-indigo-400" style="width:18px;height:18px"></i>
-        <span class="font-semibold text-sm">API Watchdog</span>
+<div id="app" class="hidden">
+  <header class="app-header">
+    <div class="app-header-inner">
+      <div class="app-logo">
+        <i data-lucide="shield-check" style="width:16px;height:16px"></i>
+        <span>API Watchdog</span>
       </div>
-      <div class="flex items-center gap-2">
-        <button id="telegramBtn" class="btn-ghost text-xs flex items-center gap-1.5" onclick="connectTelegram()">
-          <i data-lucide="send" style="width:13px;height:13px"></i>
+      <div class="header-actions">
+        <button id="telegramBtn" class="btn-ghost" onclick="connectTelegram()">
+          <i data-lucide="send" style="width:12px;height:12px"></i>
           Connect Telegram
         </button>
-        <button class="btn-ghost text-xs flex items-center gap-1.5" onclick="logout()">
-          <i data-lucide="log-out" style="width:13px;height:13px"></i>
+        <button class="btn-ghost" onclick="logout()">
+          <i data-lucide="log-out" style="width:12px;height:12px"></i>
           Logout
         </button>
       </div>
     </div>
   </header>
 
-  <!-- CONTENT -->
-  <main class="max-w-3xl mx-auto px-6 py-8">
-
-    <!-- Add Endpoint -->
-    <div class="mb-6">
-      <div class="flex gap-2">
-        <input class="input-field" id="newUrl" type="url" placeholder="https://your-api.com/health" />
-        <button class="btn-primary whitespace-nowrap flex items-center gap-1.5" onclick="addEndpoint()">
-          <i data-lucide="plus" style="width:14px;height:14px"></i>
-          Add
-        </button>
-      </div>
+  <main class="app-main">
+    <div class="add-row">
+      <input class="input-field" id="newUrl" type="url" placeholder="https://your-api.com/health" />
+      <button class="btn-add" onclick="addEndpoint()">
+        <i data-lucide="plus" style="width:14px;height:14px"></i> Add
+      </button>
     </div>
 
-    <!-- Stats bar -->
-    <div class="flex items-center justify-between mb-4">
-      <div class="flex items-center gap-4">
-        <span class="text-xs text-slate-400">
-          <span id="upCount" class="text-green-400 font-semibold">0</span> Up
-        </span>
-        <span class="text-xs text-slate-400">
-          <span id="downCount" class="text-red-400 font-semibold">0</span> Down
-        </span>
+    <div class="stats-bar">
+      <div class="stat-group">
+        <span><span id="upCount" class="stat-up">0</span> Up</span>
+        <span><span id="downCount" class="stat-down">0</span> Down</span>
       </div>
-      <div class="flex items-center gap-1.5 text-xs text-slate-500">
+      <div style="display:flex;align-items:center;gap:6px;">
         <i data-lucide="refresh-cw" style="width:11px;height:11px" id="refreshIcon"></i>
         <span id="lastRefresh">–</span>
       </div>
     </div>
 
-    <!-- Endpoint List -->
-    <div id="endpointList" class="flex flex-col gap-2">
-      <!-- Skeleton placeholder -->
-      <div class="endpoint-card animate-pulse">
-        <div class="h-3 bg-slate-700 rounded w-2/3 mb-2"></div>
-        <div class="h-2 bg-slate-800 rounded w-1/3"></div>
+    <div id="endpointList">
+      <div class="endpoint-card" style="opacity:0.4">
+        <div style="height:12px;background:var(--surface-2);border-radius:4px;width:60%;margin-bottom:8px"></div>
+        <div style="height:8px;background:var(--surface-2);border-radius:4px;width:30%"></div>
       </div>
     </div>
-
   </main>
 </div>
 
 <script>
   // ── CONFIG ──────────────────────────────────────────────
-  const BASE = 'http://YOUR_OCI_IP:8000';  // ← replace with your OCI VM public IP
+  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:';
+  const BASE = isLocal ? 'http://127.0.0.1:8000' : 'http://68.233.98.163:8000';
 
   // ── STATE ───────────────────────────────────────────────
   let token = localStorage.getItem('token');
@@ -266,17 +527,17 @@
   document.addEventListener('DOMContentLoaded', () => {
     lucide.createIcons();
     if (token) showApp();
-    else showModal();
+    else showAuthPage();
   });
 
   // ── AUTH ────────────────────────────────────────────────
-  function showModal() {
-    document.getElementById('authModal').classList.remove('hidden');
+  function showAuthPage() {
+    document.getElementById('authPage').classList.remove('hidden');
     document.getElementById('app').classList.add('hidden');
   }
 
   function showApp() {
-    document.getElementById('authModal').classList.add('hidden');
+    document.getElementById('authPage').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
     lucide.createIcons();
     loadEndpoints();
@@ -303,23 +564,20 @@
       const res = await fetch(`${BASE}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
+        body: JSON.stringify({ email, password })
       });
-      if (!res.ok) { 
-        const d = await res.json(); 
+      if (!res.ok) {
+        const d = await res.json();
         let errMsg = 'Registration failed.';
-        if (d.detail) {
-          errMsg = Array.isArray(d.detail) ? d.detail[0].msg : d.detail;
-        }
-        showErr(errEl, errMsg); 
-        return; 
+        if (d.detail) errMsg = Array.isArray(d.detail) ? d.detail[0].msg : d.detail;
+        showErr(errEl, errMsg);
+        return;
       }
       showToast('Account created! Please log in.', 'success');
       switchTab('login');
       return;
     }
 
-    // Login
     const form = new URLSearchParams();
     form.append('username', email);
     form.append('password', password);
@@ -330,14 +588,12 @@
       body: form
     });
 
-    if (!res.ok) { 
-      const d = await res.json(); 
+    if (!res.ok) {
+      const d = await res.json();
       let errMsg = 'Login failed.';
-      if (d.detail) {
-        errMsg = Array.isArray(d.detail) ? d.detail[0].msg : d.detail;
-      }
-      showErr(errEl, errMsg); 
-      return; 
+      if (d.detail) errMsg = Array.isArray(d.detail) ? d.detail[0].msg : d.detail;
+      showErr(errEl, errMsg);
+      return;
     }
     const data = await res.json();
     token = data.access_token;
@@ -354,21 +610,18 @@
     token = null;
     localStorage.removeItem('token');
     clearInterval(refreshTimer);
-    showModal();
+    showAuthPage();
   }
 
   // ── ENDPOINTS ───────────────────────────────────────────
   async function loadEndpoints() {
     const res = await authFetch(`${BASE}/endpoints/my/endpoints`);
     if (!res) return;
-
     if (res.status === 401) { logout(); return; }
-
     const list = await res.json();
     renderEndpoints(list);
     updateStats(list);
     document.getElementById('lastRefresh').textContent = 'just now';
-
     checkTelegramStatus();
     lucide.createIcons();
   }
@@ -379,94 +632,56 @@
     const data = await res.json();
     const btn = document.getElementById('telegramBtn');
     if (data.is_linked) {
-      btn.innerHTML = `<i data-lucide="check-circle" style="width:13px;height:13px" class="text-green-400"></i> <span class="text-green-400">Telegram connected</span>`;
-      btn.classList.add('pointer-events-none');
-      btn.classList.remove('text-xs');
-      btn.classList.add('text-xs');
+      btn.innerHTML = `<i data-lucide="check-circle" style="width:12px;height:12px;color:var(--success)"></i> <span style="color:var(--success)">Telegram connected</span>`;
+      btn.style.pointerEvents = 'none';
     }
   }
 
   function renderEndpoints(list) {
     const el = document.getElementById('endpointList');
-
     if (!list.length) {
-      el.innerHTML = `
-        <div class="text-center text-slate-500 text-sm py-12">
-          <i data-lucide="radar" class="mx-auto mb-3 text-slate-600" style="width:32px;height:32px"></i>
-          <p>No endpoints yet. Add one above.</p>
-        </div>`;
+      el.innerHTML = `<div class="empty-state"><i data-lucide="radar" style="width:32px;height:32px"></i><p>No endpoints yet. Add one above.</p></div>`;
       lucide.createIcons();
       return;
     }
-
     el.innerHTML = list.map(e => {
-      const status = e.last_status;
-      const dot = status === 'UP'
-        ? `<div class="pulse-up"></div>`
-        : status === 'DOWN'
-          ? `<div class="dot-down"></div>`
-          : `<div class="dot-unknown"></div>`;
-
-      const badge = status === 'UP'
-        ? `<span class="text-green-400 text-xs font-semibold">UP</span>`
-        : status === 'DOWN'
-          ? `<span class="text-red-400 text-xs font-semibold">DOWN</span>`
-          : `<span class="text-slate-500 text-xs font-semibold">PENDING</span>`;
-
+      const s = e.last_status;
+      const dot = s === 'UP' ? '<div class="pulse-up"></div>' : s === 'DOWN' ? '<div class="dot-down"></div>' : '<div class="dot-unknown"></div>';
+      const badge = s === 'UP' ? '<span class="badge-up">UP</span>' : s === 'DOWN' ? '<span class="badge-down">DOWN</span>' : '<span class="badge-pending">PENDING</span>';
       const checked = e.last_checked ? timeAgo(e.last_checked) : 'Not checked yet';
       const changed = e.last_changed ? timeAgo(e.last_changed) : '–';
-
-      return `
-        <div class="endpoint-card">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 min-w-0">
-              ${dot}
-              <a href="${e.url}" target="_blank" class="text-sm font-medium truncate text-blue-400 hover:underline cursor-pointer">${e.url}</a>
-            </div>
-            <div class="flex items-center gap-2 ml-3 flex-shrink-0">
-              ${badge}
-            </div>
-          </div>
-          <div class="flex gap-4 mt-2 ml-4">
-            <span class="text-xs text-slate-500">Checked <span class="text-slate-400">${checked}</span></span>
-            <span class="text-xs text-slate-500">Last Alert <span class="text-slate-400">${changed}</span></span>
-          </div>
-        </div>`;
+      return `<div class="endpoint-card"><div class="ep-row"><div class="ep-left">${dot}<a href="${e.url}" target="_blank" class="ep-url">${e.url}</a></div><div class="ep-right">${badge}<button class="btn-del" onclick="deleteEndpoint(${e.endpoint_id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button></div></div><div class="ep-meta"><span>Checked <span>${checked}</span></span><span>Last Alert <span>${changed}</span></span></div></div>`;
     }).join('');
-
     lucide.createIcons();
   }
 
   function updateStats(list) {
-    const up = list.filter(e => e.last_status === 'UP').length;
-    const down = list.filter(e => e.last_status === 'DOWN').length;
-    document.getElementById('upCount').textContent = up;
-    document.getElementById('downCount').textContent = down;
+    document.getElementById('upCount').textContent = list.filter(e => e.last_status === 'UP').length;
+    document.getElementById('downCount').textContent = list.filter(e => e.last_status === 'DOWN').length;
   }
 
   async function addEndpoint() {
     const input = document.getElementById('newUrl');
     const url = input.value.trim();
     if (!url) return;
-
     const res = await authFetch(`${BASE}/endpoints/add?url=${encodeURIComponent(url)}`, { method: 'POST' });
     if (!res) return;
+    if (res.ok) { input.value = ''; showToast('Endpoint added!', 'success'); loadEndpoints(); }
+    else { const d = await res.json(); showToast(d.detail || 'Failed to add endpoint.', 'error'); }
+  }
 
-    if (res.ok) {
-      input.value = '';
-      showToast('Endpoint added!', 'success');
-      loadEndpoints();
-    } else {
-      const d = await res.json();
-      showToast(d.detail || 'Failed to add endpoint.', 'error');
-    }
+  async function deleteEndpoint(id) {
+    if (!confirm('Delete this endpoint?')) return;
+    const res = await authFetch(`${BASE}/endpoints/${id}`, { method: 'DELETE' });
+    if (!res) return;
+    if (res.ok) { showToast('Endpoint deleted!', 'success'); loadEndpoints(); }
+    else { const d = await res.json(); showToast(d.detail || 'Failed to delete.', 'error'); }
   }
 
   // ── TELEGRAM ─────────────────────────────────────────────
   async function connectTelegram() {
     const res = await authFetch(`${BASE}/telegram-link`);
     if (!res) return;
-
     const data = await res.json();
     if (data.telegram_link) {
       window.open(data.telegram_link, '_blank');
@@ -477,17 +692,7 @@
   // ── UTILS ────────────────────────────────────────────────
   async function authFetch(url, options = {}) {
     if (!token) return null;
-    const res = await fetch(url, {
-      ...options,
-      headers: {
-        ...(options.headers || {}),
-        'Authorization': `Bearer ${token}`
-      }
-    }).catch(() => {
-      showToast('Network error. Check your connection.', 'error');
-      return null;
-    });
-    return res;
+    return await fetch(url, { ...options, headers: { ...(options.headers || {}), 'Authorization': `Bearer ${token}` } }).catch(() => { showToast('Network error.', 'error'); return null; });
   }
 
   function timeAgo(isoStr) {
@@ -507,15 +712,10 @@
     setTimeout(() => el.classList.remove('show'), 3000);
   }
 
-  // Allow Enter key on auth fields
   ['authEmail', 'authPassword'].forEach(id => {
-    document.getElementById(id).addEventListener('keydown', e => {
-      if (e.key === 'Enter') handleAuth();
-    });
+    document.getElementById(id).addEventListener('keydown', e => { if (e.key === 'Enter') handleAuth(); });
   });
-  document.getElementById('newUrl').addEventListener('keydown', e => {
-    if (e.key === 'Enter') addEndpoint();
-  });
+  document.getElementById('newUrl').addEventListener('keydown', e => { if (e.key === 'Enter') addEndpoint(); });
 </script>
 </body>
 </html>

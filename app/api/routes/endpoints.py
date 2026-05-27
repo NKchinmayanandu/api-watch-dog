@@ -57,17 +57,19 @@ def get_my_endpoints(
     endpoints = db.query(Endpoint).filter(
         Endpoint.user_id == current_user.id
     ).all()
-
-    return [
-        {
+    result = []
+    for e in endpoints:
+        result.append({
             "endpoint_id": e.id, 
             "url": e.url,
             "last_status": e.last_status,
             "last_checked": e.last_checked,
             "last_changed": e.last_changed
-        }
-        for e in endpoints
-    ]
+        })
+
+    return result
+
+
 
 
 # 🔹 GET LOGS FOR SPECIFIC ENDPOINT
@@ -85,6 +87,7 @@ def get_logs(
     if not endpoint:
         raise HTTPException(status_code=404, detail="Not found or not yours")
 
+    #check log by descending order .order_by(CheckLog.checked_at.desc())
     logs = (
         db.query(CheckLog)
         .filter(CheckLog.endpoint_id == endpoint_id)
@@ -97,20 +100,78 @@ def get_logs(
         "url": endpoint.url,
         "logs": logs
     }
+
+# 🔹 DELETE ENDPOINT
+@router.delete("/{endpoint_id}")
+def delete_endpoint(
+    endpoint_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    endpoint = db.query(Endpoint).filter(
+        Endpoint.id == endpoint_id,
+        Endpoint.user_id == current_user.id
+    ).first()
+
+    if not endpoint:
+        raise HTTPException(status_code=404, detail="Endpoint not found or not yours")
+
+    # Delete related logs first to avoid foreign key constraints
+    db.query(CheckLog).filter(CheckLog.endpoint_id == endpoint_id).delete()
+    
+    db.delete(endpoint)
+    db.commit()
+    return {"message": "Endpoint deleted successfully"}
+
 @router.get("/test-telegram")
 async def test_telegram():
-    import httpx, os
+    import os
+    import httpx
+    from fastapi import HTTPException
 
     BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-    chat_id = "PUT_YOUR_CHAT_ID"
+    CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
-    async with httpx.AsyncClient() as client:
-        await client.post(
-            f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage",
-            json={
-                "chat_id": chat_id,
-                "text": "🚀 test from backend"
-            }
+    if not BOT_TOKEN:
+        raise HTTPException(
+            status_code=500,
+            detail="TELEGRAM_BOT_TOKEN not set"
         )
 
-    return {"sent": True}
+    if not CHAT_ID:
+        raise HTTPException(
+            status_code=500,
+            detail="TELEGRAM_CHAT_ID not set"
+        )
+
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": "🚀 test from backend"
+    }
+
+    try:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await client.post(
+                url,
+                json=payload
+            )
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=response.status_code,
+                detail=data
+            )
+
+        data = response.json()
+        
+        return {
+            "success": True,
+            "telegram_response": data
+        }
+
+    except httpx.RequestError as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Telegram request failed: {str(e)}"
+        )

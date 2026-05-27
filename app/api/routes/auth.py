@@ -36,9 +36,6 @@ def login(
     db: Session = Depends(get_db)
 ):
     user = db.query(User).filter(User.email == form_data.username).first()
-    print("DB USER:", user)
-    if user:
-        print("HASH IN DB:", user.password)
     if not user or not verify_password(form_data.password, user.password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
