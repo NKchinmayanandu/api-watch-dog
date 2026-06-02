@@ -5,9 +5,14 @@ from app.models.user import User
 router = APIRouter()
 
 @router.get("/telegram-link")
-def get_telegram_link(current_user: User = Depends(get_current_user)):
-    bot_username = "YOUR_BOT_USERNAME"
+def get_telegram_link(
+    current_user: User = Depends(get_current_user)
+):
+    bot_username = "Chinmayanandu_bot"
 
     return {
-        "link": f"https://t.me/{bot_username}?start={current_user.link_token}"
+        "telegram_link":
+        f"https://t.me/{bot_username}?start={current_user.link_token}",
+
+        "is_linked": bool(current_user.chat_id)
     }

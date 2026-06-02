@@ -2,17 +2,14 @@ from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-import threading
+import asyncio
 from app.services.monitor import run_monitor
 from app.api.routes.endpoints import router as endpoint_router
-from app.services.notifier import send_alert
 import os
 from app.db.base import Base
 from app.db.session import engine
-from app.models.endpoint import Endpoint
-from app.models.logs import CheckLog
 from app.api.routes.auth import router as auth_router 
 from app.api.routes.telegram import router as telegram_router
 from app.api.routes.test import router as test_router
@@ -48,11 +45,9 @@ def home():
     )
 
 @app.on_event("startup")
-def start_mointor():
-    print("🚀 STARTING MONITOR THREAD")
-    thread = threading.Thread(target=run_monitor)
-    thread.daemon = True
-    thread.start()
+async def start_monitor():
+    print("🚀 STARTING MONITOR TASK")
+    asyncio.create_task(run_monitor())
 
 @app.get("/health")
 def health():

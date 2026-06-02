@@ -1,91 +1,132 @@
-import requests
-import time
+import asyncio
+import httpx
 from datetime import datetime, timedelta
 
-from app.services.notifier import send_alert
+from app.services.telegram_service import send_message
 from app.db.session import SessionLocal
 from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.models.user import User
 
 
-HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/120.0.0.0 Safari/537.36"
+    )
+}
 
-def check_endpoint(url: str):
+
+async def check_endpoint(url: str) -> tuple[str, int | None]:
     try:
-        response = requests.get(url, headers=HEADERS, timeout=5)
-        if response.status_code == 200:
-            return "UP", response.status_code
-        else:
-            return "DOWN", response.status_code
-    except requests.exceptions.RequestException:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=HEADERS, timeout=5)
+            if response.status_code == 200:
+                return "UP", response.status_code
+            else:
+                return "DOWN", response.status_code
+    except httpx.RequestError:
         return "DOWN", None
 
 
-def has_status_changed(old_status: str, new_status: str):
+def has_status_changed(old_status: str, new_status: str) -> bool:
     return old_status != new_status
 
 
-def run_monitor():
-    last_cleanup = 0   
+async def run_monitor():
+    last_cleanup = 0.0
 
     while True:
-        now = time.time()
+        now = asyncio.get_event_loop().time()
         db = SessionLocal()
 
         try:
-            print("Monitor loop running...")
+            print("🚀 Monitor loop running...")
 
             # 🔥 CLEANUP (every 1 hour)
             if now - last_cleanup > 3600:
                 db.query(CheckLog).filter(
                     CheckLog.checked_at < datetime.utcnow() - timedelta(days=1)
                 ).delete()
+
                 db.commit()
+
                 last_cleanup = now
                 print("🧹 Old logs cleaned")
 
             endpoints = db.query(Endpoint).all()
 
-            for endpoint in endpoints:
+            # 🔥 Run all endpoint checks concurrently
+            tasks = [
+                check_endpoint(endpoint.url)
+                for endpoint in endpoints
+            ]
+
+            results = await asyncio.gather(*tasks)
+
+            # Process results in same order as endpoints
+            for endpoint, (current_status, code) in zip(endpoints, results):
+
                 try:
                     url = endpoint.url
 
-                    current_status, code = check_endpoint(url)
-                    
-                    # Double check if DOWN
+                    # Double-check DOWN before alerting
                     if current_status == "DOWN":
-                        time.sleep(2)
-                        current_status, code = check_endpoint(url)
+                        await asyncio.sleep(2)
+                        current_status, code = await check_endpoint(url)
 
                     last_status = endpoint.last_status
-  
-                    user = db.query(User).filter(User.id == endpoint.user_id).first()
+
+                    user = db.query(User).filter(
+                        User.id == endpoint.user_id
+                    ).first()
+
                     chat_id = user.chat_id if user else None
 
-                    if last_status is None or has_status_changed(last_status, current_status):
+                    # Status changed
+                    if (
+                        last_status is None
+                        or has_status_changed(last_status, current_status)
+                    ):
 
                         log = CheckLog(
                             endpoint_id=endpoint.id,
                             status=current_status,
-                            status_code=code
+                            status_code=code,
                         )
-                        db.add(log)
-                        
-                        endpoint.last_changed = datetime.utcnow()
-                    
-                        if last_status is None:
-                            if current_status == "DOWN":
-                                send_alert(f"🚨 {url} is DOWN (first check)", chat_id)
 
-                        else:
+                        db.add(log)
+
+                        endpoint.last_changed = datetime.utcnow()
+
+                        # First check
+                        if last_status is None:
+
                             if current_status == "DOWN":
-                                send_alert(f"🚨 {url} went DOWN", chat_id)
+                                await send_message(
+                                    chat_id,
+                                    f"🚨 {url} is DOWN (first check)"
+                                )
+
+                        # Status transition
+                        else:
+
+                            if current_status == "DOWN":
+                                await send_message(
+                                    chat_id,
+                                    f"🚨 {url} went DOWN"
+                                )
+
                             else:
-                                send_alert(f"✅ {url} is back UP", chat_id)
+                                await send_message(
+                                    chat_id,
+                                    f"✅ {url} is back UP"
+                                )
 
                     endpoint.last_status = current_status
                     endpoint.last_checked = datetime.utcnow()
+
                     db.commit()
 
                 except Exception as e:
@@ -93,9 +134,9 @@ def run_monitor():
                     db.rollback()
 
         except Exception as e:
-            print("❌ ERROR:", e)
+            print(f"❌ MONITOR ERROR: {e}")
 
         finally:
             db.close()
 
-        time.sleep(30)
+        await asyncio.sleep(30)

@@ -8,6 +8,7 @@ from app.models.user import User
 from app.api.deps import get_current_user
 from app.schemas.endpoint import EndpointOut
 
+from app.cache.rate_limiting import rate_limit
 router = APIRouter()
 
 
@@ -30,8 +31,25 @@ def add_url(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
+    #checking the rate limiting 
+    rate_limit(key=f"rate_limit:add_url:{current_user.id}",
+                  window=60,
+                  limit=8)
+
     if not is_valid_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL format")
+    
+    count = (
+    db.query(Endpoint)
+    .filter(Endpoint.user_id == current_user.id)
+    .count()
+    )
+
+    if count >= 8:
+        raise HTTPException(
+            status_code=400,
+            detail="Maximum of 8 endpoints allowed"
+            )
 
     # Check if this specific user already has this URL
     existing = db.query(Endpoint).filter(
@@ -39,6 +57,8 @@ def add_url(
         Endpoint.user_id == current_user.id
     ).first()
 
+
+    
     if existing:
         raise HTTPException(status_code=400, detail="URL already added")
 

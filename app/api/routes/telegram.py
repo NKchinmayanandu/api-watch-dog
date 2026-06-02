@@ -2,48 +2,10 @@ from fastapi import APIRouter, Request, Depends
 from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.user import User
-import httpx
-from dotenv import load_dotenv
 from app.api.deps import get_current_user
-import secrets
-from app.core.config import settings
-
-TELEGRAM_BOT_TOKEN = settings.TELEGRAM_BOT_TOKEN
-
-if not TELEGRAM_BOT_TOKEN:
-    raise ValueError("TELEGRAM_BOT_TOKEN not set")
+from app.services.telegram_service import send_message as send_telegram_message
 
 router = APIRouter()
-
-
-async def send_telegram_message(chat_id: str, text: str):
-    async with httpx.AsyncClient() as client:
-        await client.post(
-            f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage",
-            json={
-                "chat_id": chat_id,
-                "text": text
-            }
-        )
-@router.get("/telegram-link")
-def generate_telegram_link(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    token = current_user.link_token
-    if not token:
-        token = secrets.token_urlsafe(16)
-        current_user.link_token = token
-        db.commit()
-
-    BOT_USERNAME = "Chinmayanandu_bot"
-
-    link = f"https://t.me/{BOT_USERNAME}?start={token}"
-
-    return {
-        "telegram_link": link,
-        "is_linked": bool(current_user.chat_id)
-    }
 
 @router.post("/webhook/telegram")
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
@@ -81,19 +43,26 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
             user = db.query(User).filter(User.link_token == token).first()
 
             if user:
+
+                # already linked condn
+                if user.chat_id:
+                    await send_telegram_message(
+                        chat_id,
+                        "✅ Your Telegram account is already linked." 
+                        )
+                    return {"ok": True}
+
                 user.chat_id = chat_id
                 db.commit()
-
-                print(f"✅ Linked Telegram for user {user.id}")
 
                 await send_telegram_message(
                     chat_id,
                     "✅ Telegram linked successfully!"
-                )
+                    )
 
             else:
                 print("❌ TOKEN NOT FOUND:", token)
-
+                # for now we are not genrating new tokens so this is not neccessary 
                 await send_telegram_message(
                     chat_id,
                     "❌ Invalid or expired link."
