@@ -6,6 +6,7 @@ from app.services.telegram_service import send_message
 from app.db.session import SessionLocal
 from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
+from app.models.incident import Incident
 from app.models.user import User
 
 
@@ -97,6 +98,22 @@ async def run_monitor():
                         )
 
                         db.add(log)
+
+                        # Handle Incidents
+                        if current_status == "DOWN":
+                            incident = Incident(
+                                endpoint_id=endpoint.id,
+                                started_at=datetime.utcnow()
+                            )
+                            db.add(incident)
+                        elif current_status == "UP":
+                            active_incident = db.query(Incident).filter(
+                                Incident.endpoint_id == endpoint.id,
+                                Incident.resolved_at == None
+                            ).first()
+                            if active_incident:
+                                active_incident.resolved_at = datetime.utcnow()
+                                active_incident.duration_seconds = int((active_incident.resolved_at - active_incident.started_at).total_seconds())
 
                         endpoint.last_changed = datetime.utcnow()
 

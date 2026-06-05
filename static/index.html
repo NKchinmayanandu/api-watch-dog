@@ -511,6 +511,17 @@
       </div>
     </div>
   </main>
+
+  <!-- LOGS MODAL -->
+  <div id="logsModal" class="hidden" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(10,10,18,0.8); z-index:100; display:flex; align-items:center; justify-content:center;">
+    <div class="auth-card" style="max-width:600px; width:90%; max-height:80vh; overflow-y:auto; padding:24px;">
+      <div class="ep-row" style="margin-bottom:16px;">
+        <h3 style="font-size:16px; font-weight:600;">Endpoint History</h3>
+        <button class="btn-del" onclick="closeLogsModal()"><i data-lucide="x" style="width:16px;height:16px"></i></button>
+      </div>
+      <div id="logsContent">Loading...</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -650,9 +661,80 @@
       const badge = s === 'UP' ? '<span class="badge-up">UP</span>' : s === 'DOWN' ? '<span class="badge-down">DOWN</span>' : '<span class="badge-pending">PENDING</span>';
       const checked = e.last_checked ? timeAgo(e.last_checked) : 'Not checked yet';
       const changed = e.last_changed ? timeAgo(e.last_changed) : '–';
-      return `<div class="endpoint-card"><div class="ep-row"><div class="ep-left">${dot}<a href="${e.url}" target="_blank" class="ep-url">${e.url}</a></div><div class="ep-right">${badge}<button class="btn-del" onclick="deleteEndpoint(${e.endpoint_id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button></div></div><div class="ep-meta"><span>Checked <span>${checked}</span></span><span>Last Alert <span>${changed}</span></span></div></div>`;
+      return `<div class="endpoint-card"><div class="ep-row"><div class="ep-left">${dot}<a href="${e.url}" target="_blank" class="ep-url">${e.url}</a></div><div class="ep-right">${badge}<button class="btn-ghost" onclick="viewLogs(${e.endpoint_id})" style="padding:4px 8px; font-size:11px; margin-left:8px;">Logs</button><button class="btn-del" onclick="deleteEndpoint(${e.endpoint_id})" title="Delete"><i data-lucide="trash-2" style="width:13px;height:13px"></i></button></div></div><div class="ep-meta"><span>Checked <span>${checked}</span></span><span>Last Alert <span>${changed}</span></span></div></div>`;
     }).join('');
     lucide.createIcons();
+  }
+
+  function closeLogsModal() {
+    document.getElementById('logsModal').classList.add('hidden');
+  }
+
+  async function viewLogs(id) {
+    document.getElementById('logsContent').innerHTML = 'Loading...';
+    document.getElementById('logsModal').classList.remove('hidden');
+    lucide.createIcons();
+
+    const res = await authFetch(`${BASE}/endpoints/${id}/logs`);
+    if (!res || !res.ok) {
+      document.getElementById('logsContent').innerHTML = '<div class="auth-error">Failed to load logs.</div>';
+      return;
+    }
+    const data = await res.json();
+    
+    let html = `<div style="margin-bottom:24px;">`;
+    
+    if (data.incidents && data.incidents.length > 0) {
+      html += `<h4 style="margin-bottom:8px; color:var(--text); font-weight:600;">Recent Incidents</h4>
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm); margin-bottom:24px;">
+        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); color:var(--text-muted);">
+              <th style="padding:8px 12px; font-weight:500;">Started</th>
+              <th style="padding:8px 12px; font-weight:500;">Resolved</th>
+              <th style="padding:8px 12px; font-weight:500;">Duration</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      data.incidents.forEach(inc => {
+        const start = new Date(inc.started_at).toLocaleString();
+        const resTime = inc.resolved_at ? new Date(inc.resolved_at).toLocaleString() : 'Ongoing';
+        const dur = inc.duration_seconds !== null ? `${Math.floor(inc.duration_seconds / 60)}m ${inc.duration_seconds % 60}s` : '–';
+        html += `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">${start}</td>
+          <td style="padding:8px 12px;">${resTime}</td>
+          <td style="padding:8px 12px;">${dur}</td>
+        </tr>`;
+      });
+      html += `</tbody></table></div>`;
+    }
+
+    if (data.logs && data.logs.length > 0) {
+      html += `<h4 style="margin-bottom:8px; color:var(--text); font-weight:600;">Raw Check Logs</h4>
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius-sm);">
+        <table style="width:100%; border-collapse:collapse; text-align:left; font-size:12px;">
+          <thead>
+            <tr style="border-bottom:1px solid var(--border); color:var(--text-muted);">
+              <th style="padding:8px 12px; font-weight:500;">Time</th>
+              <th style="padding:8px 12px; font-weight:500;">Status</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      data.logs.forEach(log => {
+        const time = new Date(log.checked_at).toLocaleString();
+        const stat = log.status === 'UP' ? '<span class="badge-up">UP</span>' : '<span class="badge-down">DOWN</span>';
+        html += `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 12px;">${time}</td>
+          <td style="padding:8px 12px;">${stat}</td>
+        </tr>`;
+      });
+      html += `</tbody></table></div>`;
+    } else {
+      html += `<p style="font-size:12px; color:var(--text-muted);">No logs available yet.</p>`;
+    }
+    
+    html += `</div>`;
+    document.getElementById('logsContent').innerHTML = html;
   }
 
   function updateStats(list) {

@@ -17,3 +17,11 @@ def rate_limit(key:str,
             detail=f"number of attempts exceeded, try again after {ttl} seconds!"
         )
     
+def check_add_url_rate_limit(user_id:int):
+    rate_limit(
+        key=f"rate_limit:add_url:{user_id}",
+        window=60,
+        limit=8
+        )
+    
+    

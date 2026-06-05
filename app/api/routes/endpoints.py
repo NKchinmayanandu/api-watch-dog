@@ -6,9 +6,9 @@ from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.models.user import User
 from app.api.deps import get_current_user
-from app.schemas.endpoint import EndpointOut
+from app.schemas.endpoint import EndpointOut, EndpointLogsOut
 
-from app.cache.rate_limiting import rate_limit
+from app.cache.rate_limiting import check_add_url_rate_limit
 router = APIRouter()
 
 
@@ -32,9 +32,9 @@ def add_url(
     current_user: User = Depends(get_current_user)
 ):
     #checking the rate limiting 
-    rate_limit(key=f"rate_limit:add_url:{current_user.id}",
-                  window=60,
-                  limit=8)
+    check_add_url_rate_limit(
+        user_id=current_user.id
+    )
 
     if not is_valid_url(url):
         raise HTTPException(status_code=400, detail="Invalid URL format")
@@ -93,7 +93,7 @@ def get_my_endpoints(
 
 
 # 🔹 GET LOGS FOR SPECIFIC ENDPOINT
-@router.get("/{endpoint_id}/logs")
+@router.get("/{endpoint_id}/logs", response_model=EndpointLogsOut)
 def get_logs(
     endpoint_id: int,
     db: Session = Depends(get_db),
@@ -116,9 +116,27 @@ def get_logs(
         .all()
     )
 
+    from app.models.incident import Incident
+    incidents = (
+        db.query(Incident)
+        .filter(Incident.endpoint_id == endpoint_id)
+        .order_by(Incident.started_at.desc())
+        .limit(20)
+        .all()
+    )
+
     return {
         "url": endpoint.url,
-        "logs": logs
+        "logs": [{"status": log.status, "checked_at": log.checked_at} for log in logs],
+        "incidents": [
+            {
+                "id": i.id,
+                "started_at": i.started_at,
+                "resolved_at": i.resolved_at,
+                "duration_seconds": i.duration_seconds
+            }
+            for i in incidents
+        ]
     }
 
 # 🔹 DELETE ENDPOINT
