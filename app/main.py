@@ -8,12 +8,10 @@ import asyncio
 from app.services.monitor import run_monitor
 from app.api.routes.endpoints import router as endpoint_router
 import os
-from app.db.base import Base
-from app.db.session import engine
 from app.api.routes.auth import router as auth_router 
 from app.api.routes.telegram import router as telegram_router
 from app.api.routes.test import router as test_router
-
+from app.workers.telegram_worker import telegram_worker
 
 
 app = FastAPI()
@@ -46,8 +44,14 @@ def home():
 
 @app.on_event("startup")
 async def start_monitor():
+    print("🚀 STARTING TELEGRAM WORKER")
+
+    asyncio.create_task(telegram_worker())
     print("🚀 STARTING MONITOR TASK")
+
     asyncio.create_task(run_monitor())
+    
+    await run_monitor()
 
 @app.get("/health")
 def health():

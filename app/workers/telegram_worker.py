@@ -12,7 +12,7 @@ async def telegram_worker():
 
         try:
             await send_message(
-                chat_id=job["chat_id"]
+                chat_id=job["chat_id"],
                 message = job["message"]
                 )
             
@@ -23,5 +23,5 @@ async def telegram_worker():
 
         finally:
             telegram_queue.task_done()
-            
+
 

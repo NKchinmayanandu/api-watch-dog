@@ -8,7 +8,7 @@ from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.models.incident import Incident
 from app.models.user import User
-
+from app.queues.telegram_queue import telegram_queue
 
 HEADERS = {
     "User-Agent": (
@@ -102,12 +102,21 @@ async def check_and_alert_endpoint(client:httpx.AsyncClient,
             # only THIS site waits. Other sites are completely unaffected.
             if last_status is None:
                 if current_status == "DOWN":
-                    await send_message(chat_id, f"🚨 {url} is DOWN (first check)")
+                    await telegram_queue.put({
+                                            "chat_id": chat_id,
+                                            "message": f"🚨 {url} went DOWN"
+                                            })
             else:
                 if current_status == "DOWN":
-                    await send_message(chat_id, f"🚨 {url} went DOWN")
+                    await telegram_queue.put({
+                                            "chat_id":chat_id, 
+                                            "message":f"🚨 {url} went DOWN"
+                                            })
                 else:
-                    await send_message(chat_id, f"✅ {url} is back UP")
+                    await telegram_queue.put({
+                                            "chat_id":chat_id, 
+                                            "message":f"🚨 {url} came UP"
+                                            })
 
             # Update final endpoint state
             endpoint.last_status = current_status
