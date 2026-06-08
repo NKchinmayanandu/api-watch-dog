@@ -11,6 +11,7 @@ import os
 from app.api.routes.auth import router as auth_router 
 from app.api.routes.telegram import router as telegram_router
 from app.api.routes.test import router as test_router
+from app.api.routes.user import router as user_router
 from app.workers.telegram_worker import telegram_worker
 
 
@@ -34,6 +35,7 @@ app.include_router(endpoint_router, prefix="/endpoints")
 app.include_router(auth_router)
 app.include_router(telegram_router)
 app.include_router(test_router)
+app.include_router(user_router)
 
 @app.get("/")
 def home():
