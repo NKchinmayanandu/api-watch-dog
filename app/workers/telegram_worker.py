@@ -1,15 +1,16 @@
 from app.queues.telegram_queue import telegram_queue
 
 from app.services.telegram_service import send_message
-
+from app.cache.redis_client import redis_client
+import json
 async def telegram_worker():
     print("telegram worker started 🚀 ")
 
     while True:
 
         #we are trying to get the job from the queue so 
-        job = await telegram_queue.get()
-
+        queue_name,job = await redis_client.blpop("telegram_queue")
+        job = json.loads(job)
         try:
             await send_message(
                 chat_id=job["chat_id"],

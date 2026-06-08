@@ -9,7 +9,8 @@ from app.models.logs import CheckLog
 from app.models.incident import Incident
 from app.models.user import User
 from app.queues.telegram_queue import telegram_queue
-
+from app.cache.redis_client import redis_client
+import json
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -102,18 +103,25 @@ async def check_and_alert_endpoint(client:httpx.AsyncClient,
             # only THIS site waits. Other sites are completely unaffected.
             if last_status is None:
                 if current_status == "DOWN":
-                    await telegram_queue.put({
-                                            "chat_id": chat_id,
+                    #dumps for serialization
+                    await redis_client.rpush(
+                                            "telegram_queue",
+                                            json.dumps({"chat_id": chat_id,
                                             "message": f"🚨 {url} went DOWN"
                                             })
+                                        )
             else:
                 if current_status == "DOWN":
-                    await telegram_queue.put({
-                                            "chat_id":chat_id, 
-                                            "message":f"🚨 {url} went DOWN"
+                    await redis_client.rpush(
+                                            "telegram_queue",
+                                            json.dumps({"chat_id": chat_id,
+                                            "message": f"🚨 {url} went DOWN"
                                             })
+                                        )
                 else:
-                    await telegram_queue.put({
+                    await redis_client.rpush(
+                                            "telegram_queue",
+                                            {
                                             "chat_id":chat_id, 
                                             "message":f"🚨 {url} came UP"
                                             })
