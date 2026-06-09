@@ -8,8 +8,7 @@ from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.models.incident import Incident
 from app.models.user import User
-from app.queues.telegram_queue import telegram_queue
-from app.cache.redis_client import redis_client
+from app.queues.telegram_queue import enqueue
 import json
 HEADERS = {
     "User-Agent": (
@@ -104,7 +103,7 @@ async def check_and_alert_endpoint(client:httpx.AsyncClient,
             if last_status is None:
                 if current_status == "DOWN":
                     #dumps for serialization
-                    await redis_client.rpush(
+                    await enqueue(
                                             "telegram_queue",
                                             json.dumps({"chat_id": chat_id,
                                             "message": f"🚨 {url} went DOWN"
@@ -112,14 +111,14 @@ async def check_and_alert_endpoint(client:httpx.AsyncClient,
                                         )
             else:
                 if current_status == "DOWN":
-                    await redis_client.rpush(
+                    await enqueue(
                                             "telegram_queue",
                                             json.dumps({"chat_id": chat_id,
                                             "message": f"🚨 {url} went DOWN"
                                             })
                                         )
                 else:
-                    await redis_client.rpush(
+                    await enqueue(
                                             "telegram_queue",
                                             {
                                             "chat_id":chat_id, 
