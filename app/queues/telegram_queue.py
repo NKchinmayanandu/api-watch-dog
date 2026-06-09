@@ -1,6 +1,19 @@
-from app.cache.redis_client import redis_client
+# app/queues/telegram_queue.py
+
 import json
-# this is redis queue as queue is stored inside the redis
-async def enqueue(queue_name:str,
-                  data:dict):
-    await redis_client.rpush(queue_name,json.dumps(dict))
+
+from app.cache.redis_client import redis_client
+
+
+async def enqueue_telegram_message(
+    chat_id: int,
+    message: str
+):
+    await redis_client.rpush(
+        "telegram_queue",
+        json.dumps({
+            "chat_id": chat_id,
+            "message": message
+        })
+    )
+    

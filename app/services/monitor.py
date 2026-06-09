@@ -8,7 +8,7 @@ from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
 from app.models.incident import Incident
 from app.models.user import User
-from app.queues.telegram_queue import enqueue
+from app.queues.telegram_queue import enqueue_telegram_message
 import json
 HEADERS = {
     "User-Agent": (
@@ -103,27 +103,21 @@ async def check_and_alert_endpoint(client:httpx.AsyncClient,
             if last_status is None:
                 if current_status == "DOWN":
                     #dumps for serialization
-                    await enqueue(
-                                            "telegram_queue",
-                                            json.dumps({"chat_id": chat_id,
-                                            "message": f"🚨 {url} went DOWN"
-                                            })
+                    await enqueue_telegram_message(
+                                            chat_id,
+                                            f"🚨 {url} went DOWN"
                                         )
             else:
                 if current_status == "DOWN":
-                    await enqueue(
-                                            "telegram_queue",
-                                            json.dumps({"chat_id": chat_id,
-                                            "message": f"🚨 {url} went DOWN"
-                                            })
+                    await enqueue_telegram_message(
+                                            chat_id,
+                                            f"🚨 {url} went DOWN"
                                         )
                 else:
-                    await enqueue(
-                                            "telegram_queue",
-                                            {
-                                            "chat_id":chat_id, 
-                                            "message":f"🚨 {url} came UP"
-                                            })
+                    await enqueue_telegram_message(
+                                            chat_id,
+                                            f"🚨 {url} came UP"
+                                            )
 
             # Update final endpoint state
             endpoint.last_status = current_status
