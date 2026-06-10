@@ -16,4 +16,3 @@ async def enqueue_telegram_message(
             "message": message
         })
     )
-    
