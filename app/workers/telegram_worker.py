@@ -1,6 +1,5 @@
 import json
 import asyncio
-from app.queues.telegram_queue import telegram_queue
 from app.services.telegram_service import send_message
 from app.cache.redis_client import redis_client
 
