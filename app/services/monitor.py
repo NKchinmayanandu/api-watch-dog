@@ -1,7 +1,7 @@
 import asyncio
 import json
 from datetime import datetime, timedelta
-
+from app.services.telegram_service import send_message
 from app.db.session import SessionLocal
 from app.models.endpoint import Endpoint
 from app.models.logs import CheckLog
@@ -9,7 +9,6 @@ from app.cache.redis_client import redis_client
 
 async def run_monitor():
     last_cleanup = 0.0
-
     while True:
         now = asyncio.get_event_loop().time()
         
@@ -27,13 +26,10 @@ async def run_monitor():
                 print(f"❌ Cleanup error: {e}")
             finally:
                 db.close()
-
         # 2. Get all endpoint IDs to check
         db = SessionLocal()
         try:
             endpoints = db.query(Endpoint).all()
-            
-            # Convert endpoints to jobs and push to Redis
             jobs = []
             for endpoint in endpoints:
                 job = {
@@ -47,7 +43,6 @@ async def run_monitor():
                 jobs.append(json.dumps(job))
         finally:
             db.close()
-
         if jobs:
             print(f"🚀 Enqueueing {len(jobs)} endpoints for checking...")
             # Push all jobs to Redis pipeline for efficiency
@@ -55,6 +50,12 @@ async def run_monitor():
                 for job in jobs:
                     pipe.lpush("check_url_queue", job)
                 await pipe.execute()
-
+            if jobs:
+                print(f"🚀 Enqueueing {len(jobs)} endpoints for checking...")
+                # Push all jobs to Redis pipeline for efficiency
+                async with redis_client.pipeline(transaction=True) as pipe:
+                    for job in jobs:
+                        pipe.lpush("check_url_queue", job)
+                    await pipe.execute()
         # 3. Rest for 30 seconds before doing it again
         await asyncio.sleep(30)

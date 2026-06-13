@@ -9,10 +9,8 @@ from app.models.logs import CheckLog
 from app.models.incident import Incident
 from app.models.user import User
 from app.queues.telegram_queue import enqueue_telegram_message
-
 HEADERS = {"User-Agent": "UptimeBot/1.0"}
 CONCURRENT_LIMIT = 50
-
 async def check_endpoint(client: httpx.AsyncClient, url: str) -> tuple[str, int | None]:
     """Uses a shared client to make lightning-fast network calls."""
     try:
@@ -22,10 +20,8 @@ async def check_endpoint(client: httpx.AsyncClient, url: str) -> tuple[str, int 
         return "DOWN", response.status_code
     except httpx.RequestError:
         return "DOWN", None
-
 def has_status_changed(old_status: str, new_status: str) -> bool:
     return old_status != new_status
-
 async def process_url_job(client: httpx.AsyncClient, raw_job: str):
     """
     Handles the entire lifecycle (check -> double-check -> DB log -> alert)
@@ -40,14 +36,11 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
         endpoint_last_status = job["endpoint_last_status"]
         
         current_status, code = await check_endpoint(client, endpoint_url)
-
         # 1. Double-check DOWN status immediately
         if current_status == "DOWN":
             await asyncio.sleep(2)
             current_status, code = await check_endpoint(client, endpoint_url)
-
         last_status = endpoint_last_status
-
         # 2. Only proceed if status changed or it's the very first check
         if last_status is None or has_status_changed(last_status, current_status):
             
@@ -58,7 +51,6 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
                 status_code=code,
             )
             db.add(log)
-
             # Handle Incident tracking
             if current_status == "DOWN":
                 incident = Incident(endpoint_id=endpoint_id, started_at=datetime.utcnow())
@@ -77,11 +69,9 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
             endpoint = db.query(Endpoint).filter(Endpoint.id == endpoint_id).first()
             if endpoint:
                 endpoint.last_changed = datetime.utcnow()
-
                 # Fetch the user's chat_id for alerting
                 user = db.query(User).filter(User.id == endpoint.user_id).first()
                 chat_id = user.chat_id if user else None
-
                 # 3. Trigger the alert
                 if chat_id:
                     if last_status is None:
@@ -92,12 +82,10 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
                             await enqueue_telegram_message(chat_id, f"🚨 {endpoint_url} went DOWN")
                         else:
                             await enqueue_telegram_message(chat_id, f"✅ {endpoint_url} came UP")
-
                 # Update final endpoint state
                 endpoint.last_status = current_status
             
             db.commit()
-
     except Exception as e:
         print(f"❌ ERROR processing {endpoint_id}: {e}")
         db.rollback()
@@ -108,10 +96,8 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
             await redis_client.lrem("processing_url_queue", 1, raw_job)
         except Exception as queue_err:
             print(f"⚠️ Could not remove job from processing queue: {queue_err}")
-
-
+            
 semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
-
 async def check_url_worker():
     print("url checker worker started 🚀")
     async with httpx.AsyncClient() as client:
@@ -121,18 +107,14 @@ async def check_url_worker():
                 
                 if not raw_job:
                     continue
-
                 # Wait until a slot is free before spawning the task
                 await semaphore.acquire()
-
                 async def worker_task(job):
                     try:
                         await process_url_job(client, job)
                     finally:
                         semaphore.release()
-
                 asyncio.create_task(worker_task(raw_job))
-
             except Exception as e:
                 print(f"⚠️ Redis Connection Error: {e}")
                 await asyncio.sleep(1)

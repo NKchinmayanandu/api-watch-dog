@@ -14,7 +14,7 @@ from app.api.routes.test import router as test_router
 from app.api.routes.user import router as user_router
 from app.workers.telegram_worker import telegram_worker
 from app.workers.check_url_worker import check_url_worker
-
+from app.workers.check_url_worker import check_url_worker
 
 app = FastAPI()
 
