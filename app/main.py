@@ -13,6 +13,7 @@ from app.api.routes.telegram import router as telegram_router
 from app.api.routes.test import router as test_router
 from app.api.routes.user import router as user_router
 from app.workers.telegram_worker import telegram_worker
+from app.workers.check_url_worker import check_url_worker
 
 
 app = FastAPI()
@@ -47,13 +48,13 @@ def home():
 @app.on_event("startup")
 async def start_monitor():
     print("🚀 STARTING TELEGRAM WORKER")
-
     asyncio.create_task(telegram_worker())
-    print("🚀 STARTING MONITOR TASK")
 
+    print("🚀 STARTING URL CHECK WORKER")
+    asyncio.create_task(check_url_worker())
+
+    print("🚀 STARTING MONITOR ENQUEUER TASK")
     asyncio.create_task(run_monitor())
-    
-    await run_monitor()
 
 @app.get("/health")
 def health():
