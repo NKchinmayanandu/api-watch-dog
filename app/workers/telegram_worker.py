@@ -25,6 +25,8 @@ async def process_job(raw_job):
             if job["attempts"] >= MAX_ATTEMPTS:
                 async with redis_client.pipeline(transaction=True) as pipe:
                     pipe.lpush("dead_letter_queue", json.dumps(job))
+                    #this trims the list if it goes more 999
+                    pipe.ltrim("dead_letter_queue", 0, 999)
                     pipe.lrem("processing_queue", 1, raw_job)
                     await pipe.execute()
             else:

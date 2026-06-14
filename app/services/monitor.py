@@ -49,13 +49,9 @@ async def run_monitor():
             async with redis_client.pipeline(transaction=True) as pipe:
                 for job in jobs:
                     pipe.lpush("check_url_queue", job)
+                #this is where the pipe means all queue gets executed not in lpush
                 await pipe.execute()
-            if jobs:
-                print(f"🚀 Enqueueing {len(jobs)} endpoints for checking...")
-                # Push all jobs to Redis pipeline for efficiency
-                async with redis_client.pipeline(transaction=True) as pipe:
-                    for job in jobs:
-                        pipe.lpush("check_url_queue", job)
-                    await pipe.execute()
         # 3. Rest for 30 seconds before doing it again
         await asyncio.sleep(30)
+
+#with 50k urls at once this is not optimal as u would have to send queues in batches 

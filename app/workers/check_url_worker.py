@@ -96,7 +96,7 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
             await redis_client.lrem("processing_url_queue", 1, raw_job)
         except Exception as queue_err:
             print(f"⚠️ Could not remove job from processing queue: {queue_err}")
-            
+
 semaphore = asyncio.Semaphore(CONCURRENT_LIMIT)
 async def check_url_worker():
     print("url checker worker started 🚀")
@@ -114,6 +114,7 @@ async def check_url_worker():
                         await process_url_job(client, job)
                     finally:
                         semaphore.release()
+                #again magic dont wait for create_task to run compeletely to make another corountine object
                 asyncio.create_task(worker_task(raw_job))
             except Exception as e:
                 print(f"⚠️ Redis Connection Error: {e}")
