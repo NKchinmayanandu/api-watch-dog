@@ -103,7 +103,7 @@ async def check_url_worker():
     async with httpx.AsyncClient() as client:
         while True:
             try:
-                raw_job = await redis_client.brpoplpush("check_url_queue", "processing_url_queue", timeout=0)
+                raw_job = await redis_client.brpoplpush("check_url_queue", "processing_url_queue", timeout=5)
                 
                 if not raw_job:
                     continue

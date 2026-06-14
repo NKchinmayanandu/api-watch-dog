@@ -49,6 +49,7 @@ def home():
 async def start_monitor():
     print("🚀 STARTING TELEGRAM WORKER")
     asyncio.create_task(telegram_worker())
+    print("debug telegram_worker")
 
     print("🚀 STARTING URL CHECK WORKER")
     asyncio.create_task(check_url_worker())

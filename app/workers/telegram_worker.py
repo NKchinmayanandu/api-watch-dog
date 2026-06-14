@@ -45,7 +45,7 @@ async def telegram_worker():
     while True:
         try:
             # We still await here because we must wait until Redis actually has a job
-            raw_job = await redis_client.brpoplpush("telegram_queue", "processing_queue", timeout=0)
+            raw_job = await redis_client.brpoplpush("telegram_queue", "processing_queue", timeout=5)
             
             if not raw_job:
                 continue
