@@ -11,6 +11,7 @@ from app.models.user import User
 from app.queues.telegram_queue import enqueue_telegram_message
 HEADERS = {"User-Agent": "UptimeBot/1.0"}
 CONCURRENT_LIMIT = 50
+
 async def check_endpoint(client: httpx.AsyncClient, url: str) -> tuple[str, int | None]:
     """Uses a shared client to make lightning-fast network calls."""
     try:
@@ -20,8 +21,10 @@ async def check_endpoint(client: httpx.AsyncClient, url: str) -> tuple[str, int 
         return "DOWN", response.status_code
     except httpx.RequestError:
         return "DOWN", None
+    
 def has_status_changed(old_status: str, new_status: str) -> bool:
     return old_status != new_status
+
 async def process_url_job(client: httpx.AsyncClient, raw_job: str):
     """
     Handles the entire lifecycle (check -> double-check -> DB log -> alert)

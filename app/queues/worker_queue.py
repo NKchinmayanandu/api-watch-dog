@@ -7,12 +7,12 @@ async def processing_enqueue(
         message:str,
         attempts:int
 ):
-    redis_client.rpush(
+    await redis_client.rpush(
         "processing_queue",
         json.dumps({
             "chat_id": chat_id,
             "message": message,
-            "attempts":attempts
+            "attempts": attempts
         })
     )
     

@@ -26,13 +26,13 @@ def is_valid_url(url: str):
 
 # 🔹 ADD ENDPOINT
 @router.post("/add")
-def add_url(
+async def add_url(
     url: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     #checking the rate limiting 
-    check_add_url_rate_limit(
+    await check_add_url_rate_limit(
         user_id=current_user.id
     )
 
