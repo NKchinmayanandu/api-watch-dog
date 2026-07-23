@@ -11,9 +11,15 @@ from app.models.user import User
 from app.queues.telegram_queue import enqueue_telegram_message
 HEADERS = {"User-Agent": "UptimeBot/1.0"}
 CONCURRENT_LIMIT = 50
+from redis.asyncio import Redis
+
+worker_redis = Redis(
+    host="localhost",
+    port=6379,
+    decode_responses=True,
+)
 
 async def check_endpoint(client: httpx.AsyncClient, url: str) -> tuple[str, int | None]:
-    """Uses a shared client to make lightning-fast network calls."""
     try:
         response = await client.get(url, headers=HEADERS, timeout=5)
         if response.status_code == 200:
@@ -26,10 +32,6 @@ def has_status_changed(old_status: str, new_status: str) -> bool:
     return old_status != new_status
 
 async def process_url_job(client: httpx.AsyncClient, raw_job: str):
-    """
-    Handles the entire lifecycle (check -> double-check -> DB log -> alert)
-    for ONE endpoint. 
-    """
     db = SessionLocal()
     endpoint_id = None
     try:
@@ -39,12 +41,10 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
         endpoint_last_status = job["endpoint_last_status"]
         
         current_status, code = await check_endpoint(client, endpoint_url)
-        # 1. Double-check DOWN status immediately
         if current_status == "DOWN":
             await asyncio.sleep(2)
             current_status, code = await check_endpoint(client, endpoint_url)
         last_status = endpoint_last_status
-        # 2. Only proceed if status changed or it's the very first check
         if last_status is None or has_status_changed(last_status, current_status):
             
             # Create the log
@@ -72,7 +72,6 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
             endpoint = db.query(Endpoint).filter(Endpoint.id == endpoint_id).first()
             if endpoint:
                 endpoint.last_changed = datetime.utcnow()
-                # Fetch the user's chat_id for alerting
                 user = db.query(User).filter(User.id == endpoint.user_id).first()
                 chat_id = user.chat_id if user else None
                 # 3. Trigger the alert
@@ -85,7 +84,6 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
                             await enqueue_telegram_message(chat_id, f"🚨 {endpoint_url} went DOWN")
                         else:
                             await enqueue_telegram_message(chat_id, f"✅ {endpoint_url} came UP")
-                # Update final endpoint state
                 endpoint.last_status = current_status
             
             db.commit()
@@ -94,7 +92,6 @@ async def process_url_job(client: httpx.AsyncClient, raw_job: str):
         db.rollback()
     finally:
         db.close()
-        # Remove from processing queue once done
         try:
             await redis_client.lrem("processing_url_queue", 1, raw_job)
         except Exception as queue_err:
@@ -106,19 +103,18 @@ async def check_url_worker():
     async with httpx.AsyncClient() as client:
         while True:
             try:
-                raw_job = await redis_client.brpoplpush("check_url_queue", "processing_url_queue", timeout=5)
+                raw_job = await worker_redis.brpoplpush("check_url_queue", "processing_url_queue", timeout=5)
                 
                 if not raw_job:
                     continue
-                # Wait until a slot is free before spawning the task
                 await semaphore.acquire()
                 async def worker_task(job):
                     try:
                         await process_url_job(client, job)
                     finally:
                         semaphore.release()
-                #again magic dont wait for create_task to run compeletely to make another corountine object
                 asyncio.create_task(worker_task(raw_job))
             except Exception as e:
-                print(f"⚠️ Redis Connection Error: {e}")
-                await asyncio.sleep(1)
+                import traceback
+                print(type(e))
+                traceback.print_exc()

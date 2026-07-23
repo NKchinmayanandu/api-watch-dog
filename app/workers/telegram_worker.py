@@ -5,7 +5,6 @@ from app.cache.redis_client import redis_client
 
 MAX_ATTEMPTS = 3
 
-# 1. Move the actual work into a separate function
 async def process_job(raw_job):
     try:
         job = json.loads(raw_job)
@@ -14,8 +13,6 @@ async def process_job(raw_job):
         job["attempts"] += 1
 
         try:
-            # This awaits, but ONLY pauses this specific background task!
-            # The main loop keeps running.
             await send_message(chat_id=job["chat_id"], message=job["message"])
             print(f"✅ Sent Telegram message to {job['chat_id']}")
             await redis_client.lrem("processing_queue", 1, raw_job)
@@ -25,7 +22,6 @@ async def process_job(raw_job):
             if job["attempts"] >= MAX_ATTEMPTS:
                 async with redis_client.pipeline(transaction=True) as pipe:
                     pipe.lpush("dead_letter_queue", json.dumps(job))
-                    #this trims the list if it goes more 999
                     pipe.ltrim("dead_letter_queue", 0, 999)
                     pipe.lrem("processing_queue", 1, raw_job)
                     await pipe.execute()
@@ -38,20 +34,17 @@ async def process_job(raw_job):
     except Exception as queue_err:
         print(f"⚠️ Job processing error: {queue_err}")
 
-# 2. Keep the main loop strictly for fetching jobs
 async def telegram_worker():
     print("telegram worker started 🚀 ")
-
     while True:
         try:
-            # We still await here because we must wait until Redis actually has a job
-            raw_job = await redis_client.brpoplpush("telegram_queue", "processing_queue", timeout=5)
+            result = await redis_client.brpop("telegram_queue", timeout=5)
             
-            if not raw_job:
+            if not result:
                 continue
-
-            # 🔥 THE MAGIC LINE: This spawns a background worker instantly!
-            # It does NOT wait for process_job to finish.
+            
+            _, raw_job = result 
+            
             asyncio.create_task(process_job(raw_job))
 
         except Exception as q_err:

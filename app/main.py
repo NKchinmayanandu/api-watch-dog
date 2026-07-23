@@ -50,13 +50,13 @@ async def start_monitor():
     print("🚀 STARTING TELEGRAM WORKER")
     asyncio.create_task(telegram_worker())
     print("debug telegram_worker")
-
+    
     print("🚀 STARTING URL CHECK WORKER")
     asyncio.create_task(check_url_worker())
-
+    
     print("🚀 STARTING MONITOR ENQUEUER TASK")
     asyncio.create_task(run_monitor())
-
+    
 @app.get("/health")
 def health():
     return {"status": "ok"}

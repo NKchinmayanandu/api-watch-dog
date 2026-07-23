@@ -3,14 +3,6 @@ from app.core.config import settings
 
 
 async def send_message(chat_id: str | int, text: str) -> None:
-    """
-    Core Telegram sender — the single source of truth for sending
-    any message through the Telegram Bot API.
-
-    Used by:
-      - webhook flow  (telegram.py route)
-      - monitor flow  (monitor.py)
-    """
     bot_token = settings.TELEGRAM_BOT_TOKEN
 
     if not bot_token:
